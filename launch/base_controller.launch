@@ -1,0 +1,8 @@
+<!-- Starts up everything needed to run the example listener/talker Python nodes. -->
+
+<launch>
+  <node pkg="base_controller" type="base_controller.py" name="base_controller">
+    <param name="rate" value="10"/>
+  </node>
+
+</launch>
