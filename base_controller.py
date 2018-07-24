@@ -11,7 +11,7 @@ import struct
 MAX_X = 0.15
 MAX_Y = 0.15
 MAX_THETA = 0.2
-update_rate = 0.5
+update_rate = 0.05
 v_scale = 100 #0.01ms = speed1, 00.1ms = speed 100
 global is_go
 is_go=True
@@ -32,6 +32,11 @@ def e_stop(data):
         go_pub.publish(Int16(0))
     else:
         stop = False
+def resend_go(event):#send go to platform in case weird stuff happened
+    if (not stop) and is_go:
+        go_pub.publish(Int16(1))
+        print("resending to platform")
+        speed_pub.publish(last_cmd)
 def update_grisp(event):
     if stop:
         speed_pub.publish(Vector3(0,0,0))
@@ -75,9 +80,9 @@ def update_grisp(event):
                 is_go = True
     else:
         if is_go and new_cmd.x == 0.0 and new_cmd.z == 0.0 and new_cmd.y == 0.0:
+            is_go = False
             go_pub.publish(Int16(0))
             print("stop")
-            is_go = False
 
 
 rospy.init_node('base_controller')
@@ -85,10 +90,11 @@ global speed_pub
 global direction_pub
 global angular_pub
 global go_pub
-go_pub = rospy.Publisher("/platform/go", Int16, queue_size=3)
-speed_pub = rospy.Publisher("/platform/combined", Vector3, queue_size=3)
-rospy.Subscriber("/cmd_vel", Twist, callback)
-rospy.Subscriber("/platform/e_stop", Int16, e_stop)
-r = rospy.Rate(10) # 10hz
+go_pub = rospy.Publisher("/platform/go", Int16, queue_size=1)
+speed_pub = rospy.Publisher("/platform/combined", Vector3, queue_size=1, tcp_nodelay=True)
+rospy.Subscriber("/cmd_vel", Twist, callback, queue_size=1, tcp_nodelay=True)
+rospy.Subscriber("/platform/e_stop", Int16, e_stop, queue_size=1, tcp_nodelay=True)
+r = rospy.Rate(50) # 10hz
 rospy.Timer(rospy.Duration(0.8),update_grisp)
+rospy.Timer(rospy.Duration(5), resend_go)
 rospy.spin()
